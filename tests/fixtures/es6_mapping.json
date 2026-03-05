@@ -1,0 +1,13 @@
+{
+  "old_index": {
+    "mappings": {
+      "doc": {
+        "properties": {
+          "title": { "type": "text", "analyzer": "english" },
+          "status": { "type": "keyword" },
+          "count": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

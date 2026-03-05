@@ -1,0 +1,8 @@
+array_fields:
+  - tags
+
+table_model: duplicate
+
+replication_num: 3
+ip_type: ipv6
+include_id: false

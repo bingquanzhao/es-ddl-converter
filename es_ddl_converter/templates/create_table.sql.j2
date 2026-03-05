@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS `{{ table.table_name }}` (
+{% for col in key_columns_list %}
+    `{{ col.name }}`{{ ' ' * pad_name(col.name) }} {{ col.doris_type }}{{ ' ' * pad_type(col.doris_type) }} NOT NULL{% if col.default_value is not none %}    DEFAULT "{{ col.default_value }}"{% endif %}    COMMENT '{{ col.comment }}'{{ "," if not loop.last or value_columns or table.indexes }}
+{% endfor %}
+{% if value_columns %}
+
+{% for col in value_columns %}
+    `{{ col.name }}`{{ ' ' * pad_name(col.name) }} {{ col.doris_type }}{{ ' ' * pad_type(col.doris_type) }} NULL{% if col.default_value is not none %}        DEFAULT "{{ col.default_value }}"{% endif %}        COMMENT '{{ col.comment }}'{{ "," if not loop.last or table.indexes }}
+{% endfor %}
+{% endif %}
+{% if table.indexes %}
+
+{% for idx in table.indexes %}
+    INDEX {{ idx.index_name }}(`{{ idx.column_name }}`) USING {{ idx.index_type }}{{ idx.format_properties() }}{% if idx.comment %} COMMENT '{{ idx.comment }}'{% endif %}{{ "," if not loop.last }}
+{% endfor %}
+{% endif %}
+)
+{{ table.table_model }}({{ key_columns_str }})
+{% if table.partition_expr %}
+{{ table.partition_expr }} ()
+{% endif %}
+{{ table.distribution_expr }}
+PROPERTIES (
+{% for key, value in properties_list %}
+    "{{ key }}" = "{{ value }}"{{ "," if not loop.last }}
+{% endfor %}
+);

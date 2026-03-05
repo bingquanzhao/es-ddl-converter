@@ -1,0 +1,37 @@
+{
+  "my_logs": {
+    "mappings": {
+      "dynamic": "true",
+      "properties": {
+        "@timestamp": { "type": "date", "format": "epoch_millis" },
+        "level": { "type": "keyword" },
+        "service": { "type": "keyword", "ignore_above": 128 },
+        "trace_id": { "type": "keyword" },
+        "message": {
+          "type": "text",
+          "analyzer": "standard",
+          "fields": {
+            "keyword": { "type": "keyword", "ignore_above": 2048 }
+          }
+        },
+        "host_ip": { "type": "ip" },
+        "duration": { "type": "float" },
+        "response_code": { "type": "short" },
+        "tags": { "type": "keyword" },
+        "user": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "long" },
+            "name": { "type": "keyword" }
+          }
+        },
+        "location": { "type": "geo_point" },
+        "metadata": {
+          "type": "object",
+          "enabled": false
+        },
+        "time_range": { "type": "date_range" }
+      }
+    }
+  }
+}

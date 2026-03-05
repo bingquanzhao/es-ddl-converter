@@ -1,0 +1,22 @@
+{
+  "rally_dense_vector": {
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "vector": {
+          "type": "dense_vector",
+          "element_type": "",
+          "dims": 96,
+          "index": true,
+          "similarity": "dot_product",
+          "index_options": {
+            "type": "",
+            "on_disk_rescore": false,
+            "m": 32,
+            "ef_construction": 100
+          }
+        }
+      }
+    }
+  }
+}

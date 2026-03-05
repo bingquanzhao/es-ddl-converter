@@ -1,0 +1,38 @@
+# job.yaml — es-ddl-converter job configuration example
+
+# Source (choose one of: url, dir, file)
+source:
+  url: http://localhost:9200
+  user: elastic
+  password: secret
+  index: "logs-*"
+  verify_ssl: true
+
+# Filter
+exclude: ".*test.*"
+
+# Output
+output:
+  dir: ./ddl_output/
+  table_prefix: ""
+
+# Doris execution (optional, requires execute: true)
+doris:
+  execute: true
+  host: 127.0.0.1
+  port: 9030
+  user: root
+  password: ""
+  database: my_db
+
+# Table settings (equivalent to -c config.yaml)
+table:
+  model: duplicate
+  include_id: false
+  replication_num: 3
+  ip_type: ipv6
+  array_fields: []
+
+# Behavior
+fail_fast: false
+warnings_only: false

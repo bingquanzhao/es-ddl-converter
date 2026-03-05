@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "es-ddl-converter"
+version = "0.1.0"
+description = "Convert Elasticsearch index mappings to Apache Doris CREATE TABLE DDL"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+dependencies = [
+    "Jinja2>=3.0",
+    "PyYAML>=5.4",
+    "requests>=2.28",
+    "pymysql>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+e2e = [
+    "pytest>=7.0",
+    "requests>=2.28",
+    "pymysql>=1.0",
+]
+
+[project.scripts]
+es-ddl-converter = "es_ddl_converter.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["es_ddl_converter*"]
+
+[tool.setuptools.package-data]
+es_ddl_converter = ["templates/*.j2"]
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests requiring Docker (ES + Doris)",
+]
