@@ -33,8 +33,24 @@
 
 ## 安装
 
+**PyPI 稳定版：**
+
 ```bash
 pip install es-ddl-converter
+```
+
+**源码安装（获取最新功能）：**
+
+```bash
+pip install git+https://github.com/bingquanzhao/es-ddl-converter.git
+```
+
+**本地开发安装：**
+
+```bash
+git clone https://github.com/bingquanzhao/es-ddl-converter.git
+cd es-ddl-converter
+pip install -e .
 ```
 
 **环境要求：** Python 3.8+
