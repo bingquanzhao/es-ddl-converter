@@ -372,9 +372,9 @@ class TestFullExampleMapping:
         assert "host_ip" in col_map
         assert "duration" in col_map
 
-        # Object flattening: user.id → user_id, user.name → user_name
-        assert "user_id" in col_map
-        assert "user_name" in col_map
+        # user object → VARIANT by default
+        assert "user" in col_map
+        assert col_map["user"].upper().startswith("VARIANT")
 
         # metadata (enabled:false) → VARIANT
         assert "metadata" in col_map
@@ -494,13 +494,12 @@ class TestNestedObjectFlattening:
         columns = _get_doris_columns(self.TABLE_NAME)
         col_names = {c["Field"] for c in columns}
 
-        # Flattened names
-        assert "server_host" in col_names
-        assert "server_geo_country" in col_names
-        assert "server_geo_city" in col_names
-        assert "request_method" in col_names
-        assert "request_path" in col_names
-        assert "request_bytes" in col_names
+        # Objects default to VARIANT — top-level object names present
+        assert "server" in col_names
+        assert "request" in col_names
+        # Sub-fields not flattened
+        assert "server_host" not in col_names
+        assert "request_method" not in col_names
 
 
 @pytest.mark.e2e

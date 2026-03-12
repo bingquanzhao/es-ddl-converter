@@ -5,7 +5,6 @@ Handles:
 - Recursive object flattening
 - Multi-field collapsing (text + .keyword -> single column)
 - Array field annotation from config
-- Dynamic mapping (_extra VARIANT column)
 - copy_to target detection
 """
 
@@ -122,16 +121,24 @@ def extract_all_mappings(raw_json):
 
 
 def parse_mapping(
-    raw_json,       # type: Dict[str, Any]
-    collector,      # type: WarningCollector
+    raw_json,           # type: Dict[str, Any]
+    collector,          # type: WarningCollector
     array_fields=None,  # type: Optional[Set[str]]
+    flatten_fields=None,  # type: Optional[Set[str]]
     ip_type="IPv6",     # type: str
     include_id=False,   # type: bool
 ):
     # type: (...) -> ParsedMapping
-    """Parse a full ES mapping JSON into a ParsedMapping."""
+    """Parse a full ES mapping JSON into a ParsedMapping.
+
+    By default, ``object`` fields with sub-properties are mapped to VARIANT.
+    Specify ``flatten_fields`` (a set of ES dot-paths) to opt-in to flattening
+    specific object fields (e.g. ``{"user", "host.geo"}``).
+    """
     if array_fields is None:
         array_fields = set()
+    if flatten_fields is None:
+        flatten_fields = set()
 
     index_name, mapping_body = extract_mapping(raw_json)
     properties = mapping_body.get("properties", {})
@@ -153,7 +160,7 @@ def parse_mapping(
         ))
         used_names.add("_id")
 
-    # Recursively flatten properties
+    # Walk properties; objects default to VARIANT unless in flatten_fields
     _flatten_properties(
         properties=properties,
         prefix="",
@@ -161,23 +168,11 @@ def parse_mapping(
         columns=columns,
         collector=collector,
         array_fields=array_fields,
+        flatten_fields=flatten_fields,
         copy_to_targets=copy_to_targets,
         used_names=used_names,
         ip_type=ip_type,
     )
-
-    # Add _extra VARIANT if dynamic is not strict
-    dynamic_str = str(dynamic).lower() if dynamic is not None else None
-    if dynamic_str not in ("strict",):
-        dynamic_label = dynamic_str or "unspecified"
-        columns.append(DorisColumn(
-            name="_extra",
-            doris_type="VARIANT",
-            comment="dynamic={}, catch-all for unmapped fields".format(dynamic_label),
-            es_type="_extra",
-            es_field_path="_extra",
-            index_disabled=True,
-        ))
 
     # Handle copy_to targets not already present as columns
     existing_names = {c.name for c in columns}
@@ -208,7 +203,7 @@ def parse_mapping(
     return ParsedMapping(
         index_name=index_name,
         columns=columns,
-        dynamic=dynamic_str,
+        dynamic=dynamic,
         has_routing=has_routing,
         copy_to_targets=copy_to_targets,
     )
@@ -230,19 +225,24 @@ def _resolve_unique_name(name, used_names):
 
 
 def _flatten_properties(
-    properties,     # type: Dict[str, Any]
-    prefix,         # type: str
-    path_prefix,    # type: str
-    columns,        # type: List[DorisColumn]
-    collector,      # type: WarningCollector
-    array_fields,   # type: Set[str]
+    properties,       # type: Dict[str, Any]
+    prefix,           # type: str
+    path_prefix,      # type: str
+    columns,          # type: List[DorisColumn]
+    collector,        # type: WarningCollector
+    array_fields,     # type: Set[str]
+    flatten_fields,   # type: Set[str]
     copy_to_targets,  # type: Set[str]
-    used_names,     # type: Set[str]
-    ip_type,        # type: str
-    depth=0,        # type: int
+    used_names,       # type: Set[str]
+    ip_type,          # type: str
+    depth=0,          # type: int
 ):
     # type: (...) -> None
-    """Recursively flatten ES properties into DorisColumns."""
+    """Walk ES properties and map to DorisColumns.
+
+    Objects default to VARIANT. Only paths listed in ``flatten_fields``
+    are recursively expanded into individual columns.
+    """
     for field_name, field_def in properties.items():
         if not isinstance(field_def, dict):
             continue
@@ -276,9 +276,9 @@ def _flatten_properties(
             ))
             continue
 
-        # --- Object with properties: recurse and flatten ---
+        # --- Object with properties ---
         if has_properties and is_object:
-            # Check enabled:false -> VARIANT
+            # enabled:false always -> VARIANT
             if field_def.get("enabled") is False:
                 unique_name = _resolve_unique_name(doris_name, used_names)
                 columns.append(DorisColumn(
@@ -290,7 +290,19 @@ def _flatten_properties(
                 ))
                 continue
 
-            # Depth limit protection
+            # Default: VARIANT unless this path is in flatten_fields
+            if es_path not in flatten_fields:
+                unique_name = _resolve_unique_name(doris_name, used_names)
+                columns.append(DorisColumn(
+                    name=unique_name,
+                    doris_type="VARIANT",
+                    comment="object",
+                    es_type="object",
+                    es_field_path=es_path,
+                ))
+                continue
+
+            # Depth limit protection (only relevant when flattening)
             if depth >= 10:
                 collector.warn(
                     es_path,
@@ -307,7 +319,7 @@ def _flatten_properties(
                 ))
                 continue
 
-            # Recurse into sub-properties
+            # Recurse into sub-properties (flatten_fields opt-in)
             sub_props = field_def["properties"]
             _flatten_properties(
                 properties=sub_props,
@@ -316,6 +328,7 @@ def _flatten_properties(
                 columns=columns,
                 collector=collector,
                 array_fields=array_fields,
+                flatten_fields=flatten_fields,
                 copy_to_targets=copy_to_targets,
                 used_names=used_names,
                 ip_type=ip_type,

@@ -89,7 +89,6 @@ def test_cli_exit_code_1_with_warnings(capsys):
 def test_cli_exit_code_0_no_warnings(capsys):
     input_file = os.path.join(FIXTURES_DIR, "simple_mapping.json")
     exit_code = main(["-i", input_file])
-    # simple mapping may still generate _extra VARIANT (INFO-level)
     # exit code is 1 if any warnings exist
     assert exit_code in (0, 1)
 

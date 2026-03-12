@@ -47,7 +47,8 @@ def test_format_invalid():
 
 # --- parse_mapping: object flattening ---
 
-def test_object_flattening(collector):
+def test_object_default_variant(collector):
+    """Object with sub-properties maps to VARIANT by default (no flatten_fields)."""
     raw = {"mappings": {"properties": {
         "user": {
             "type": "object",
@@ -59,11 +60,33 @@ def test_object_flattening(collector):
     }}}
     parsed = parse_mapping(raw, collector)
     names = [c.name for c in parsed.columns]
+    assert "user" in names
+    assert "user_id" not in names
+    assert "user_name" not in names
+    user_col = next(c for c in parsed.columns if c.name == "user")
+    assert user_col.doris_type == "VARIANT"
+
+
+def test_object_flattening(collector):
+    """Object is flattened when its path is in flatten_fields."""
+    raw = {"mappings": {"properties": {
+        "user": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "long"},
+                "name": {"type": "keyword"},
+            },
+        },
+    }}}
+    parsed = parse_mapping(raw, collector, flatten_fields={"user"})
+    names = [c.name for c in parsed.columns]
     assert "user_id" in names
     assert "user_name" in names
+    assert "user" not in names
 
 
-def test_nested_object_flattening(collector):
+def test_nested_object_default_variant(collector):
+    """Deeply nested object defaults to VARIANT at the first level."""
     raw = {"mappings": {"properties": {
         "a": {
             "properties": {
@@ -76,6 +99,25 @@ def test_nested_object_flattening(collector):
         },
     }}}
     parsed = parse_mapping(raw, collector)
+    names = [c.name for c in parsed.columns]
+    assert "a" in names
+    assert "a_b_c" not in names
+
+
+def test_nested_object_flattening(collector):
+    """Nested object is flattened when all intermediate paths are in flatten_fields."""
+    raw = {"mappings": {"properties": {
+        "a": {
+            "properties": {
+                "b": {
+                    "properties": {
+                        "c": {"type": "keyword"},
+                    },
+                },
+            },
+        },
+    }}}
+    parsed = parse_mapping(raw, collector, flatten_fields={"a", "a.b"})
     names = [c.name for c in parsed.columns]
     assert "a_b_c" in names
 
@@ -94,21 +136,20 @@ def test_object_no_properties(collector):
         "data": {"type": "object"},
     }}}
     parsed = parse_mapping(raw, collector)
-    # Object with no properties -> should appear as VARIANT (from _extra or the field itself)
-    # Actually, type is "object" with no properties key -> goes to type_mapping
+    # Object with no properties -> VARIANT
     # which handles object without properties
     names = [c.name for c in parsed.columns]
     # It should have created a VARIANT column or handled gracefully
     assert len(parsed.columns) >= 1
 
 
-# --- Dynamic mapping ---
+# --- Dynamic mapping (no _extra column) ---
 
-def test_dynamic_true_adds_extra(collector):
+def test_dynamic_true_no_extra(collector):
     raw = {"mappings": {"dynamic": "true", "properties": {"f": {"type": "keyword"}}}}
     parsed = parse_mapping(raw, collector)
     names = [c.name for c in parsed.columns]
-    assert "_extra" in names
+    assert "_extra" not in names
 
 
 def test_dynamic_strict_no_extra(collector):
@@ -118,11 +159,11 @@ def test_dynamic_strict_no_extra(collector):
     assert "_extra" not in names
 
 
-def test_dynamic_unspecified_adds_extra(collector):
+def test_dynamic_unspecified_no_extra(collector):
     raw = {"mappings": {"properties": {"f": {"type": "keyword"}}}}
     parsed = parse_mapping(raw, collector)
     names = [c.name for c in parsed.columns]
-    assert "_extra" in names
+    assert "_extra" not in names
 
 
 # --- Array fields ---
@@ -181,6 +222,7 @@ def test_routing_required(collector):
 # --- Column name uniqueness ---
 
 def test_column_name_conflict(collector):
+    """When user object is flattened, user_name conflicts with top-level user_name."""
     raw = {"mappings": {"properties": {
         "user_name": {"type": "keyword"},
         "user": {
@@ -189,7 +231,7 @@ def test_column_name_conflict(collector):
             },
         },
     }}}
-    parsed = parse_mapping(raw, collector)
+    parsed = parse_mapping(raw, collector, flatten_fields={"user"})
     names = [c.name for c in parsed.columns]
     # Both should exist, one with a suffix
     assert "user_name" in names
@@ -199,6 +241,7 @@ def test_column_name_conflict(collector):
 # --- Full example fixture ---
 
 def test_full_example(full_example_mapping, collector):
+    """Default: object fields become VARIANT; flatten_fields opts into flattening."""
     parsed = parse_mapping(
         full_example_mapping, collector,
         array_fields={"tags"},
@@ -211,8 +254,10 @@ def test_full_example(full_example_mapping, collector):
     assert "message" in names
     assert "host_ip" in names
     assert "tags" in names
-    assert "user_id" in names
-    assert "user_name" in names
+    # user object → VARIANT by default (not flattened)
+    assert "user" in names
+    assert "user_id" not in names
+    assert "user_name" not in names
     assert "location" in names
     assert "metadata" in names
     assert "time_range_gte" in names
@@ -222,6 +267,19 @@ def test_full_example(full_example_mapping, collector):
     tags_col = next(c for c in parsed.columns if c.name == "tags")
     assert tags_col.is_array is True
     assert "ARRAY" in tags_col.doris_type
+
+
+def test_full_example_with_flatten(full_example_mapping, collector):
+    """With flatten_fields, object sub-fields are expanded into individual columns."""
+    parsed = parse_mapping(
+        full_example_mapping, collector,
+        array_fields={"tags"},
+        flatten_fields={"user"},
+    )
+    names = [c.name for c in parsed.columns]
+    assert "user_id" in names
+    assert "user_name" in names
+    assert "user" not in names
 
 
 def test_es6_format(es6_mapping, collector):

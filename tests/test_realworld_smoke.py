@@ -19,9 +19,12 @@ from es_ddl_converter.mapping_parser import extract_all_mappings
 REALWORLD_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "realworld")
 
 # (fixture filename, minimum expected column count)
+# Column counts reflect the VARIANT-by-default behavior:
+# object fields with sub-properties become a single VARIANT column rather than
+# being recursively flattened. Use flatten_fields to opt-in to flattening.
 FIXTURES = [
-    ("ecs_template.json", 400),
-    ("wazuh_template.json", 100),
+    ("ecs_template.json", 40),
+    ("wazuh_template.json", 30),
     ("rally_geonames.json", 10),
     ("rally_nyc_taxis.json", 15),
     ("rally_nested.json", 5),

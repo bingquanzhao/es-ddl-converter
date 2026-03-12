@@ -73,6 +73,7 @@ def convert_one_index(
     try:
         collector = WarningCollector()
         array_fields = set(config.get("array_fields", []))
+        flatten_fields = set(config.get("flatten_fields", []))
         ip_type = config.get("ip_type", "ipv6")
         key_columns = config.get("key_columns")
         partition_field = config.get("partition_field")
@@ -87,6 +88,7 @@ def convert_one_index(
             raw_json=raw_json,
             collector=collector,
             array_fields=array_fields,
+            flatten_fields=flatten_fields,
             ip_type=ip_type,
             include_id=include_id,
         )

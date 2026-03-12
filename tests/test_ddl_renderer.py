@@ -11,12 +11,14 @@ from es_ddl_converter.table_builder import build_table
 from es_ddl_converter.warnings import WarningCollector
 
 
-def _run_pipeline(raw_json, array_fields=None, table_model="duplicate",
-                  table_name=None, include_id=False, key_columns=None):
+def _run_pipeline(raw_json, array_fields=None, flatten_fields=None,
+                  table_model="duplicate", table_name=None, include_id=False,
+                  key_columns=None):
     collector = WarningCollector()
     parsed = parse_mapping(
         raw_json, collector,
         array_fields=set(array_fields or []),
+        flatten_fields=set(flatten_fields or []),
         include_id=include_id,
     )
     indexes = determine_indexes(parsed.columns, collector)
@@ -34,6 +36,7 @@ def _run_pipeline(raw_json, array_fields=None, table_model="duplicate",
 
 
 def test_full_example(full_example_mapping):
+    """Default: object fields become VARIANT."""
     ddl, collector = _run_pipeline(
         full_example_mapping,
         array_fields=["tags"],
@@ -53,8 +56,10 @@ def test_full_example(full_example_mapping):
     assert "`message`" in ddl
     assert "`host_ip`" in ddl
     assert "`tags`" in ddl
-    assert "`user_id`" in ddl
-    assert "`user_name`" in ddl
+    # user object → VARIANT by default
+    assert "`user`" in ddl
+    assert "`user_id`" not in ddl
+    assert "`user_name`" not in ddl
     assert "`location`" in ddl
     assert "`metadata`" in ddl
     assert "`time_range_gte`" in ddl
@@ -66,6 +71,19 @@ def test_full_example(full_example_mapping):
     assert "ARRAY<VARCHAR(256)>" in ddl
     assert "IPv6" in ddl
     assert "VARIANT" in ddl
+
+
+def test_full_example_with_flatten(full_example_mapping):
+    """With flatten_fields, object sub-fields expand into individual columns."""
+    ddl, collector = _run_pipeline(
+        full_example_mapping,
+        array_fields=["tags"],
+        flatten_fields=["user"],
+        table_name="target_table",
+    )
+    assert "`user_id`" in ddl
+    assert "`user_name`" in ddl
+    assert "`user`" not in ddl
 
     # Index checks
     assert "USING INVERTED" in ddl

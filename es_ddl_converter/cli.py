@@ -430,6 +430,7 @@ def _main_convert(args):
 
     # Merge CLI args with config (CLI takes precedence)
     array_fields = set(config.get("array_fields", []))
+    flatten_fields = set(config.get("flatten_fields", []))
     table_model = (args.model
                    or config.get("table_model")
                    or config.get("model", "duplicate"))
@@ -450,6 +451,7 @@ def _main_convert(args):
             raw_json=raw_json,
             collector=collector,
             array_fields=array_fields,
+            flatten_fields=flatten_fields,
             ip_type=ip_type,
             include_id=include_id,
         )

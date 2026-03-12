@@ -32,8 +32,8 @@ _ALLOWED_DORIS = {"execute", "host", "port", "user", "password", "database"}
 
 _ALLOWED_TABLE = {
     "model", "table_model", "include_id", "replication_num",
-    "ip_type", "array_fields", "key_columns", "partition_field", "bucket_strategy",
-    "compression",
+    "ip_type", "array_fields", "flatten_fields", "key_columns", "partition_field",
+    "bucket_strategy", "compression",
 }
 
 _VALID_COMPRESSION = {"NO_COMPRESSION", "LZ4", "LZ4F", "ZLIB", "ZSTD", "SNAPPY"}

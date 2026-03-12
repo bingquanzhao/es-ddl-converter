@@ -7,7 +7,6 @@
 关键约束：
 - 充分利用 Doris 2.1+ 的 `VARIANT` 类型特性（半结构化数据、动态列、sub-column 索引）
 - `nested`、`flattened`、`object(enabled:false)` 等无法精确映射的类型优先考虑 `VARIANT` 而非强行展平
-- `dynamic mapping` 用 `_extra VARIANT` 兜底，避免未来字段丢失
 
 ## 工作规范
 

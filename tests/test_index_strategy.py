@@ -44,7 +44,7 @@ def test_text_gets_inverted_with_parser(collector):
 def test_text_ik_analyzer(collector):
     cols = [_col("content", "TEXT", "text", analyzer="ik_max_word")]
     indexes = determine_indexes(cols, collector)
-    assert indexes[0].properties["parser"] == "chinese"
+    assert indexes[0].properties["parser"] == "ik"
 
 
 def test_wildcard_gets_two_indexes(collector):

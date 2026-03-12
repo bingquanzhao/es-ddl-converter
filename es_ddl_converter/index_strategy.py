@@ -67,9 +67,9 @@ def determine_indexes(columns, collector):
     - keyword/constant_keyword: INVERTED (no parser)
     - text/match_only_text/search_as_you_type: INVERTED with parser
     - wildcard: INVERTED + NGRAM_BF
+    - VARIANT: INVERTED (indexes sub-columns for efficient filtering)
     - ARRAY fields (non-float): INVERTED for array_contains()
     - FLOAT/DOUBLE: skip (Doris limitation)
-    - JSON/VARIANT: skip (sub-column indexes managed by Doris internally)
     - index:false: skip
     """
     indexes = []  # type: List[IndexDef]
@@ -83,20 +83,29 @@ def determine_indexes(columns, collector):
 
         if base_type in NO_INVERTED_INDEX_TYPES:
             continue
-        if base_type in ("JSON", "VARIANT"):
+
+        # --- VARIANT: inverted index on sub-columns ---
+        if base_type == "VARIANT":
+            idx_name = _make_index_name(col.name, seen_names)
+            indexes.append(IndexDef(
+                index_name=idx_name,
+                column_name=col.name,
+                index_type="INVERTED",
+                properties={},
+                comment="accelerate sub-column filtering",
+            ))
             continue
 
         # --- Array fields: inverted index for array_contains (check first) ---
         if col.is_array and base_type not in NO_INVERTED_INDEX_TYPES:
-            if base_type not in ("JSON", "VARIANT"):
-                idx_name = _make_index_name(col.name, seen_names)
-                indexes.append(IndexDef(
-                    index_name=idx_name,
-                    column_name=col.name,
-                    index_type="INVERTED",
-                    properties={},
-                    comment="array contains",
-                ))
+            idx_name = _make_index_name(col.name, seen_names)
+            indexes.append(IndexDef(
+                index_name=idx_name,
+                column_name=col.name,
+                index_type="INVERTED",
+                properties={},
+                comment="array contains",
+            ))
             continue
 
         # --- Text fields with parser ---
@@ -105,7 +114,8 @@ def determine_indexes(columns, collector):
             props = {}  # type: Dict[str, str]
             if parser is not None:
                 props["parser"] = parser
-                props["support_phrase"] = "true"
+                # match_only_text: no position info → no phrase query support
+                props["support_phrase"] = "false" if col.es_type == "match_only_text" else "true"
             idx_name = _make_index_name(col.name, seen_names)
             indexes.append(IndexDef(
                 index_name=idx_name,
