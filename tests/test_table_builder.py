@@ -150,6 +150,12 @@ def test_no_compaction_policy_without_partition(collector):
     assert "compaction_policy" not in table.properties
 
 
+def test_enable_single_replica_compaction_default(collector):
+    cols = [_col("f", "VARCHAR(256)")]
+    table = build_table("t", cols, [], collector)
+    assert table.properties["enable_single_replica_compaction"] == "true"
+
+
 def test_string_cannot_be_key(collector):
     cols = [
         _col("body", "STRING", es_type="text"),

@@ -221,6 +221,7 @@ def build_table(
     }
     if partition_expr is not None:
         props["compaction_policy"] = "time_series"
+    props["enable_single_replica_compaction"] = "true"
 
     return TableDef(
         table_name=table_name,
