@@ -6,8 +6,24 @@ build-backend = "setuptools.build_meta"
 name = "es-ddl-converter"
 version = "0.1.0"
 description = "Convert Elasticsearch index mappings to Apache Doris CREATE TABLE DDL"
+readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "Apache-2.0"}
+authors = [{name = "Bingquan Zhao", email = "bingquan_zhao@icloud.com"}]
+keywords = ["elasticsearch", "doris", "migration", "ddl", "converter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Utilities",
+]
 dependencies = [
     "Jinja2>=3.0",
     "PyYAML>=5.4",
@@ -28,6 +44,10 @@ e2e = [
 
 [project.scripts]
 es-ddl-converter = "es_ddl_converter.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/bingquanzhao/es-ddl-converter"
+Repository = "https://github.com/bingquanzhao/es-ddl-converter"
 
 [tool.setuptools.packages.find]
 where = ["."]
